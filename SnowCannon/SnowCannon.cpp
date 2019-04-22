@@ -393,14 +393,147 @@ void fieldSaver(char(&f)[29][120])
 	fclose(pFieldFile);
 }
 
-void tree(char(&field)[29][120])
+void saveTree(char(&t)[29][120])
+{
+	char tree[57][239] = { 0 };
+	int X = 0, Y = 0;
+	bool pressed = false;
+	int counterX = 0, counterY = 0;
+
+	for (int i = 0; i < 57; i++)
+		for (int j = 0; j < 239; j++)
+			tree[i][j] = ' ';
+
+	
+
+	/*for (int j = 0; j < 120; j++)
+	{
+		for (int i = 0; i < 29; i++)
+		{
+			if (t[i][j] != 0)
+				break;
+		}
+
+		for (int tJ = 0; tJ < 120; tJ++)
+		{
+			for (int tI = 0; tI < 28; tI++)
+			{
+				t[tI][tJ] = t[tI][tJ + 1];
+				t[tI][119] = 0;
+			}
+
+		}
+	}*/
+
+	for (int i = 0; i < 29; i++)
+	{
+		for (int j = 0; j < 120; j++)
+		{
+			tree[Y][X] = t[i][j];
+			X += 2;
+		}
+		X = 0;
+		Y += 2;
+	}
+
+	while (!pressed)
+	{
+		
+		for (int i = 0; i < 239; i++)
+			if (tree[counterX][i] == '*')
+				pressed = true;;
+
+		counterX++;
+	}
+	counterX--;
+	pressed = false;
+	while (!pressed)
+	{
+
+		for (int i = 0; i < 57; i++)
+			if (tree[i][counterY] == '*')
+				pressed = true;;
+
+		counterY++;
+	}
+	counterY--;
+
+	for (int i = 1; i < 56; i++)
+	{
+		for (int j = 0; j < 239; j++)
+		{
+			if ((tree[i - 1][j] == tree[i + 1][j]) && (tree[i + 1][j] == '*'))
+				tree[i][j] = '|';
+			j++;
+		}
+		i++;
+	}
+
+	for (int i = 0; i < 57; i++)
+	{
+		for (int j = 1; j < 238; j++)
+		{
+			if ((tree[i][j - 1] == tree[i][j + 1]) && (tree[i][j + 1] == '*'))
+				tree[i][j] = '-';
+			j++;
+		}
+		i++;
+	}
+	
+	char c = 10;
+	pTreeFile = fopen("D:\\Temp\\SnowCannon\\Tree.txt", "w");
+	for (int i = counterX; i < 57; i++)
+	{
+		fwrite(&(tree[i][counterY]), sizeof(char), 239 - counterY, pTreeFile);
+		fwrite(&c, sizeof(char), 1, pTreeFile);
+	}
+	fclose(pTreeFile);
+}
+
+
+void createGraph(char(&f)[29][120], char(&t)[29][120], short int x, short int y, Tree(&Node));
+
+void createGraph(char(&f)[29][120], char(&t)[29][120], short int x, short int y, Tree (&Node))
+{
+	t[y][x] = f[y][x];
+	if ((f[y][x - 1] == f[y][x]) && (x > 0) && (Node.Left == NULL))
+	{
+		Node.Left = new Tree;
+		Node.Left->Right = &Node;
+		Node.Left->Down = NULL;
+		Node.Left->Left = NULL;
+
+		createGraph(f, t, x - 1, y, *(Node.Left));
+	}
+	if ((f[y + 1][x] == f[y][x]) && (y < 29) && (Node.Down == NULL))
+	{
+		Node.Down = new Tree;
+		Node.Down->Right = NULL;
+		Node.Down->Down = NULL;
+		Node.Down->Left = NULL;
+		createGraph(f, t, x, y + 1, *(Node.Down));
+	}
+	if ((f[y][x + 1] == f[y][x]) && (x < 119) && (Node.Right == NULL))
+	{
+		Node.Right = new Tree;
+		Node.Right->Left = &Node;
+		Node.Right->Down = NULL;
+		Node.Right->Right = NULL;
+		createGraph(f, t, x + 1, y, *(Node.Right));
+	}
+}
+
+void tree(char(&field)[29][120], Configs Controls)
 {
 	short int choose = 0, tempChoose = 0;
-	short int coordX = 0, coodrY = 0;
+	short int coordX = 1, coordY = 1;
 	char temp = 0;
 	char empty[120] = {0};
+	char tree[29][120] = { 0 };
 	system("cls");
 	cout << '\n';
+	temp = field[coordY][coordX];
+	field[coordY][coordX] = '\xB0';
 	printScreen(empty, field);
 	while (choose != ESC_KEY)
 	{
@@ -411,9 +544,87 @@ void tree(char(&field)[29][120])
 				tempChoose = _getch();
 
 
-		} while ((choose != ESC_KEY) && (choose != ENTER_KEY));
+		} while ((choose != ESC_KEY) && (choose != SPEC_KEY) && (tempChoose != LEFT_ARROW_KEY) && (tempChoose != RIGHT_ARROW_KEY)
+			&& (tempChoose != DOWN_ARROW_KEY) && (tempChoose != UP_ARROW_KEY) && (choose != ENTER_KEY));
 
+		if ((choose == ENTER_KEY) && (temp == Controls.snowSymbol)) 
+		{
+			field[coordY][coordX] = temp;
+			Tree *Head = new Tree;
+			Head->Left = NULL;
+			Head->Down = NULL;
+			Head->Right = NULL;
+			createGraph(field, tree, coordX, coordY, *Head);
+			saveTree(tree);
+			/*system("cls");
+			for (int i = 0; i < 29; i++) {
+				for (int j = 0; j < 120; j++)
+					cout << tree[i][j];
+				cout << '\n';
+			}
+			_getch();*/
+
+			break;
+		} else if ((choose == ENTER_KEY) && (temp != Controls.snowSymbol))
+			continue;
+
+		switch (tempChoose)
+		{
+		case LEFT_ARROW_KEY:
+			if (coordX > 0)
+			{
+				field[coordY][coordX] = temp;
+				temp = field[coordY][coordX - 1];
+				field[coordY][--coordX] = '\xB0';
+			} else {
+				field[coordY][coordX] = temp;
+				temp = field[coordY][119];
+				field[coordY][coordX = 119] = '\xB0';
+			}
+			break;
+		case RIGHT_ARROW_KEY:
+			if (coordX < 119)
+			{
+				field[coordY][coordX] = temp;
+				temp = field[coordY][coordX + 1];
+				field[coordY][++coordX] = '\xB0';
+			}
+			else {
+				field[coordY][coordX] = temp;
+				temp = field[coordY][0];
+				field[coordY][coordX = 0] = '\xB0';
+			}
+			break;
+		case DOWN_ARROW_KEY:
+			if (coordY < 29)
+			{
+				field[coordY][coordX] = temp;
+				temp = field[coordY +1 ][coordX];
+				field[++coordY][coordX] = '\xB0';
+			}
+			else {
+				field[coordY][coordX] = temp;
+				temp = field[0][coordX];
+				field[coordY = 0][coordX] = '\xB0';
+			}
+			break;
+		case UP_ARROW_KEY:
+			if (coordY > 0)
+			{
+				field[coordY][coordX] = temp;
+				temp = field[coordY - 1][coordX];
+				field[--coordY][coordX] = '\xB0';
+			}
+			else {
+				field[coordY][coordX] = temp;
+				temp = field[29][coordX];
+				field[coordY = 29][coordX] = '\xB0';
+			}
+			break;
+		}
+		printScreen(empty, field);
 	}
+	field[coordY][coordX] = temp;
 }
 
 short int menu(short int num1, short int num2, short int arrow)
@@ -424,9 +635,9 @@ short int menu(short int num1, short int num2, short int arrow)
 			if (arrow > NUM_1_KEY)
 				num1 = --arrow;
 			else
-				num1 = NUM_3_KEY;
+				num1 = NUM_4_KEY;
 		else if (num2 == DOWN_ARROW_KEY)
-			if (arrow < NUM_3_KEY)
+			if (arrow < NUM_4_KEY)
 				num1 = ++arrow;
 			else
 				num1 = NUM_1_KEY;
@@ -442,6 +653,9 @@ short int menu(short int num1, short int num2, short int arrow)
 		cout << "<--";
 	cout << '\n' << "Save    ";
 	if (num1 == NUM_3_KEY)
+		cout << "<--";
+	cout << '\n' << "Tree    ";
+	if (num1 == NUM_4_KEY)
 		cout << "<--";
 	cout << "\n\n" << "Press Esc to exit";
 	return num1;
@@ -489,20 +703,20 @@ int main()
 	char cannon[120] = { 0 };
 	char field[29][120] = { 0 };
 	int i = 0, j = 0;
-	Configs controls;
+	Configs Controls;
 	{
-		controls.fireIsSpecKey = false;
-		controls.fire = ENTER_KEY;
-		controls.moveLeftIsSpecKey = true;
-		controls.moveLeft = LEFT_ARROW_KEY;
-		controls.moveRightIsSpecKey = true;
-		controls.moveRight = RIGHT_ARROW_KEY;
-		controls.exitIsSpecKey = false;
-		controls.exit = ESC_KEY;
-		controls.speed = 100;
+		Controls.fireIsSpecKey = false;
+		Controls.fire = ENTER_KEY;
+		Controls.moveLeftIsSpecKey = true;
+		Controls.moveLeft = LEFT_ARROW_KEY;
+		Controls.moveRightIsSpecKey = true;
+		Controls.moveRight = RIGHT_ARROW_KEY;
+		Controls.exitIsSpecKey = false;
+		Controls.exit = ESC_KEY;
+		Controls.speed = 100;
 	}
 
-	controls = optionsLoader(controls);
+	Controls = optionsLoader(Controls);
 	//controls.snowSymbol = '*';
 	cannon[0] = '\xD0';
 	memset(field, '\x20', 29*120);
@@ -512,6 +726,7 @@ int main()
 		cout << '\n' << "Start   <--";
 		cout << '\n' << "Options ";
 		cout << '\n' << "Save    ";
+		cout << '\n' << "Tree    ";
 		cout << "\n\n" << "Press Esc to exit";
 	}
 	
@@ -523,17 +738,17 @@ int main()
 			if (choose == SPEC_KEY)
 				tempChoose = _getch();
 		} while ((choose != ESC_KEY) && (choose != NUM_1_KEY) && (choose != NUM_2_KEY) 
-			  && (choose != NUM_3_KEY) && (choose != SPEC_KEY) && (choose != ENTER_KEY));
+			  && (choose != NUM_3_KEY) && (choose != NUM_4_KEY) && (choose != SPEC_KEY) && (choose != ENTER_KEY));
 		if (choose == ENTER_KEY)
 		{
 			system("cls");
 			switch (arrowControl)
 			{
 			case NUM_1_KEY:
-				playingGame(cannon, field, controls);
+				playingGame(cannon, field, Controls);
 				break;
 			case NUM_2_KEY:
-				controls = options(controls);
+				Controls = options(Controls);
 				break;
 			case NUM_3_KEY:
 			{
@@ -543,6 +758,8 @@ int main()
 				cout << "Complete!";
 				Sleep(800);
 			}
+			case NUM_4_KEY:
+				tree(field, Controls);
 			}
 			choose = arrowControl;
 		}
